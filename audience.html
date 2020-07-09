@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./style.css">
+  <script src="config.js"></script>
+  <script src="im.js"></script>
+  <script src="https://cdn.ronghub.com/RongRTC-3.2.3.js"></script>
+  <script src="https://cdn.ronghub.com/RongIMLib-2.5.8.js"></script>
+  <title>观众 Demo</title>
+</head>
+
+<body>
+  <div class="rong-container">
+    <h3 class="rong-title"> Web RTC Live SDK Author Demo</h3>
+    <div class="rong-login-box">
+      <input class="rong-input" id="liveUrl" type="text" placeholder="liveUrl" value="" autocomplete="off">
+      <br>
+      <!-- <input class="rong-input" type="button" value="链接 IM" onclick="connect()"> -->
+      <!-- <br> -->
+      <input class="rong-input" type="button" value="观看直播" onclick="subscribe()">
+      <div class="rong-video-box">
+      </div>
+    </div>
+</body>
+
+<script>
+  let rongRTC, rongRoom, rongStream, currentUserId;
+
+  const VideoTag = 'RongCloudRTC', ScreenTag = 'ScreenShare';
+
+  const getDom = (key) => {
+    return document.querySelector(key);
+  };
+
+  const liveUrlNode = getDom('#liveUrl');
+
+  const initRTC = () => {
+    rongRTC = new RongRTC({
+      debug: true,
+      mode: 2,
+      liveRole: 2,
+      RongIMLib: RongIMLib,
+      error: function (error) {
+        console.log(error);
+      }
+    });
+    rongStream = new rongRTC.Stream({
+      published: addUserStream,
+      unpublished: function (user) {
+        console.log('stream unpublished', user);
+      },
+      disabled: function (user) {
+        console.log('disabled', user);
+      },
+      enabled: function (user) {
+        console.log('enabled', user);
+      },
+      muted: function (user) {
+        console.log('muted', user);
+      },
+      unmuted: function (user) {
+        console.log('unmuted', user);
+      }
+    });
+  };
+
+  const getIMToken = () => {
+    const index = location.search.substring(1) || 0;
+    return Promise.resolve(Config.audience[index]);
+  };
+
+  const connect = () => {
+    return getIMToken().then((token) => {
+      return initIM({ appkey: Config.appkey, token });
+    }).then((userId) => {
+      currentUserId = userId;
+      initRTC();
+      // alert('链接成功: ' + userId);
+    }).catch((e) => {
+      alert('join error error');
+      console.error('join error error', e);
+    });
+  };
+
+  const subscribe = () => {
+    connect().then(() => {
+      rongStream.subscribe({
+        liveUrl: liveUrlNode.value
+      }).then(({ mediaStream }) => {
+        const parentDom = document.querySelector('.rong-video-box');
+        const videoDom = createVideo(mediaStream);
+        parentDom.appendChild(videoDom);
+      });
+    });
+  };
+
+  function createVideo(stream) {
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    return video;
+  }
+
+  function addUserStream(user) {
+    const parentDom = document.querySelector('.rong-video-box');
+    const videoDom = createVideo(user.stream.mediaStream);
+    user.stream.mediaStream.oninactive = function () {
+      console.log('on stream inactive', user);
+    }
+    parentDom.appendChild(videoDom);
+  }
+
+</script>
+
+</html>

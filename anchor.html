@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./style.css">
+  <script src="config.js"></script>
+  <script src="im.js"></script>
+  <script src="https://cdn.ronghub.com/RongRTC-3.2.3.js"></script>
+  <script src="https://cdn.ronghub.com/RongIMLib-2.5.8.js"></script>
+  <title>主播 Demo</title>
+</head>
+<body>
+  <div class="rong-container">
+    <h3 class="rong-title"> Web RTC Live SDK Author Demo</h3>
+    <div class="rong-login-box">
+      <input class="rong-input" id="roomId" type="text" placeholder="房间号" value="20200709" autocomplete="off">
+      <input class="rong-input" type="button" value="加入房间" onclick="joinRoom()">
+      <br>
+      <input class="rong-input" type="button" value="发布音视频" onclick="publishVideo()">
+      <input class="rong-input" type="button" value="发布屏幕共享" onclick="publishScreenShare()">
+      <input class="rong-input" type="button" value="设置混流" onclick="setMix()">
+    <div class="rong-liveurl-box">
+      <p>LiveUrl: </p>
+      <p id="liveUrl"></p>
+    </div>
+    <div class="rong-video-box">
+    </div>
+  </div>
+</body>
+
+<script>
+  let rongRTC, rongRoom, rongStream, currentUserId;
+
+  let videoStreamId, screenStreamId;
+
+  const VideoTag = 'RongCloudRTC', ScreenTag = 'ScreenShare';
+
+  const getDom = (key) => {
+    return document.querySelector(key);
+  };
+
+  const roomIdNode = getDom('#roomId');
+
+  const initRTC = () => {
+    rongRTC = new RongRTC({
+      debug: true,
+      mode: 2,
+      liveRole: 1,
+      // mode: 2,
+      RongIMLib: RongIMLib,
+      error: function (error) {
+        console.log(error);
+      }
+    });
+    rongRoom = new rongRTC.Room({
+      id: roomIdNode.value,
+      joined: function (user) {
+        console.log(user.id + ' 加入房间');
+      },
+      left: function (user) {
+        console.log(user.id + ' 离开房间')
+      }
+    });
+    rongStream = new rongRTC.Stream({
+      published: addUserStream,
+      unpublished: function (user) {
+        console.log('stream unpublished', user);
+      },
+      disabled: function (user) {
+        console.log('disabled', user);
+      },
+      enabled: function (user) {
+        console.log('enabled', user);
+      },
+      muted: function (user) {
+        console.log('muted', user);
+      },
+      unmuted: function (user) {
+        console.log('unmuted', user);
+      }
+    });
+  };
+
+  const getIMToken = () => {
+    const index = location.search.substring(1) || 0;
+    return Promise.resolve(Config.anchor[index]);
+  };
+
+  const joinRoom = () => {
+    return getIMToken().then((token) => {
+      return initIM({ appkey: Config.appkey, token });
+    }).then((userId) => {
+      currentUserId = userId;
+      initRTC();
+      return rongRoom.join({ id: currentUserId });
+    }).then(() => {
+      alert('join room success');
+    }).catch((e) => {
+      alert('join error error');
+      console.error('join error error', e);
+    });
+  };
+
+  const publishVideo = () => {
+    return navigator.mediaDevices.getUserMedia({
+      video: {
+        width: 640,
+        height: 480
+      },
+      audio: true
+    }).then((mediaStream) => {
+      const user = {
+        id: currentUserId,
+        stream: {
+          type: 2,
+          tag: VideoTag,
+          mediaStream: mediaStream
+        }
+      };
+      videoStreamId = mediaStream.id;
+      addUserStream(user);
+      return rongStream.publish(user);
+    }).then((result) => {
+      console.log('publish success', result);
+      getDom('#liveUrl').textContent = result.liveUrl;
+    }).catch((e) => {
+      console.log('publish error');
+    });;
+  };
+
+  const publishScreenShare = () => {
+    return navigator.mediaDevices.getDisplayMedia().then((mediaStream) => {
+      const user = {
+        id: currentUserId,
+        stream: {
+          type: 2,
+          tag: ScreenTag,
+          mediaStream: mediaStream
+        }
+      };
+      screenStreamId = mediaStream.id;
+      addUserStream(user);
+      return rongStream.publish(user);
+    }).then((result) => {
+      getDom('#liveUrl').textContent = result.liveUrl;
+      console.log('publish success', result);
+    }).catch((e) => {
+      console.log('publish error');
+    });;
+  };
+
+  function createVideo(stream) {
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.autoplay = true;
+    return video;
+  }
+
+  function addUserStream(user) {
+    const parentDom = document.querySelector('.rong-video-box');
+    const videoDom = createVideo(user.stream.mediaStream);
+    user.stream.mediaStream.oninactive = function () {
+      console.log('on stream inactive', user);
+    }
+    parentDom.appendChild(videoDom);
+  }
+
+  function setMix() {
+    const options = {
+      layoutMode: RongRTC.LayoutMode.CUSTOMIZE, // 布局模式
+      video: { // 己方发布 video 的配置项, 非必填
+        renderMode: RongRTC.RenderMode.CROP, // 裁剪方式, 默认为 RenderMode.CROP
+        width: 640, // 非必填, 不填则按传入视频大小计算
+        height: 480,  // 非必填, 不填则按传入视频大小计算
+        fps: 15,
+        bitrate: 800 
+      },
+      hostUserId: currentUserId,
+      customLayout: { // 仅 layoutMode 为自定义布局时需传入
+        video: [
+          {
+            user_id: currentUserId,
+            stream_id: currentUserId + '_' + ScreenTag,
+            x: 0,
+            y: 0,
+            width: 640,
+            height: 480
+          },
+          {
+            user_id: currentUserId,
+            stream_id: currentUserId + '_' + VideoTag,
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 100
+          }
+        ]
+      }
+    }
+    rongStream.setMixConfig(options).then(() => {
+      console.log(`设置成功`);
+    }, error => {
+      console.log(error);
+    });
+  }
+
+</script>
+
+</html>
