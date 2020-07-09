@@ -18,6 +18,8 @@ const Config = {
 
 ### 主播端
 
+使用 `localhost` 或 `https` 打开 anchor.html
+
 1、点击加入房间
 
 2、点击发布音视频流
@@ -27,6 +29,8 @@ const Config = {
 4、点击设置混流
 
 ### 观众端
+
+使用 `localhost` 或 `https` 打开 audience.html
 
 1、将主播端 LiveUrl 复制到观众端输入框内
 
