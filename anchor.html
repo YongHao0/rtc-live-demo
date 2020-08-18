@@ -6,8 +6,8 @@
   <link rel="stylesheet" href="./style.css">
   <script src="config.js"></script>
   <script src="im.js"></script>
-  <script src="https://cdn.ronghub.com/RongRTC-3.2.3.js"></script>
-  <script src="https://cdn.ronghub.com/RongIMLib-2.5.8.js"></script>
+  <script src="https://cdn.ronghub.com/RongRTC-3.2.4.js"></script>
+  <script src="https://cdn.ronghub.com/RongIMLib-3.0.5-dev.js"></script>
   <title>主播 Demo</title>
 </head>
 <body>
@@ -90,7 +90,7 @@
   const joinRoom = () => {
     return getIMToken().then((token) => {
       return initIM({ appkey: Config.appkey, token });
-    }).then((userId) => {
+    }).then(({ id: userId }) => {
       currentUserId = userId;
       initRTC();
       return rongRoom.join({ id: currentUserId });

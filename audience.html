@@ -8,7 +8,7 @@
   <script src="config.js"></script>
   <script src="im.js"></script>
   <script src="https://cdn.ronghub.com/RongRTC-3.2.3.js"></script>
-  <script src="https://cdn.ronghub.com/RongIMLib-2.5.8.js"></script>
+  <script src="https://cdn.ronghub.com/RongIMLib-3.0.5-dev.js"></script>
   <title>观众 Demo</title>
 </head>
 
@@ -75,7 +75,7 @@
   const connect = () => {
     return getIMToken().then((token) => {
       return initIM({ appkey: Config.appkey, token });
-    }).then((userId) => {
+    }).then(({ id: userId }) => {
       currentUserId = userId;
       initRTC();
       // alert('链接成功: ' + userId);
